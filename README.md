@@ -89,6 +89,8 @@
 
 ### 打包发布
 
+#### 手动打包
+
 运行打包脚本：
 
 ```powershell
@@ -96,6 +98,33 @@
 ```
 
 这会创建一个zip文件，可以直接上传到Chrome Web Store。
+
+#### 自动发布（推荐）
+
+使用自动发布脚本，一键完成打包、提交、创建标签和推送到GitHub：
+
+```powershell
+# 基本用法（自动从 manifest.json 读取版本号）
+.\release.ps1
+
+# 指定版本号
+.\release.ps1 -Version "1.0.1"
+
+# 创建GitHub Release（需要安装GitHub CLI）
+.\release.ps1 -Version "1.0.1" -CreateRelease
+
+# 查看详细使用说明
+# 参考：发布脚本使用说明.md
+```
+
+发布脚本会自动：
+- 📦 打包扩展
+- 📝 提交代码到Git
+- 🏷️ 创建Git标签
+- 🚀 推送到GitHub
+- 📌 创建GitHub Release（可选）
+
+详细使用说明请查看 [发布脚本使用说明.md](发布脚本使用说明.md)
 
 ## 版本历史
 
