@@ -1,0 +1,99 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.1)'
+        required: true
+        type: string
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js (for version parsing)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Extract version from tag
+      id: version
+      if: github.event_name == 'push'
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION"
+        
+    - name: Use manual version
+      id: version
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        echo "Using manual version: ${{ github.event.inputs.version }}"
+        
+    - name: Update manifest.json version
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        # Update version in manifest.json using jq
+        sudo apt-get update && sudo apt-get install -y jq
+        jq ".version = \"$VERSION\"" manifest.json > manifest.json.tmp
+        mv manifest.json.tmp manifest.json
+        echo "Updated manifest.json version to $VERSION"
+        cat manifest.json
+        
+    - name: Create build directory
+      run: |
+        mkdir -p build
+        
+    - name: Copy files to build directory
+      run: |
+        cp manifest.json build/
+        cp popup.html build/
+        cp -r css build/
+        cp -r js build/
+        cp -r icons build/
+        echo "Files copied to build directory"
+        
+    - name: Create zip file
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        cd build
+        zip -r "../minimal-pomodoro-v${VERSION}.zip" .
+        cd ..
+        ls -lh minimal-pomodoro-v${VERSION}.zip
+        
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: minimal-pomodoro-v${{ steps.version.outputs.version }}.zip
+        name: Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
+        body: |
+          ## Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
+          
+          ### Download
+          Download the extension package from the assets below.
+          
+          ### Installation
+          1. Download the `.zip` file
+          2. Extract it to a folder
+          3. Open Chrome and go to `chrome://extensions/`
+          4. Enable "Developer mode"
+          5. Click "Load unpacked" and select the extracted folder
+          
+          ### Changes
+          - See commit history for detailed changes
+          
+          **Note**: For Chrome Web Store installation, please visit the [Chrome Web Store](https://chrome.google.com/webstore) page.
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
