@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简番茄钟</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* 弹窗特定样式 */
+        body {
+            min-height: auto;
+            padding: 0;
+            margin: 0;
+        }
+        .container {
+            width: 400px;
+            max-width: 100%;
+            padding: 20px;
+            margin: 0;
+            border-radius: 0;
+            box-shadow: none;
+        }
+        .timer-circle {
+            width: 200px;
+            height: 200px;
+        }
+        .timer-time {
+            font-size: 2.5rem;
+        }
+        .progress-ring {
+            width: 200px;
+            height: 200px;
+        }
+        .progress-ring-circle {
+            /* 进度值将由JavaScript动态设置 */
+        }
+        header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+        .start-menu {
+            left: 0;
+            transform: translateX(0);
+            min-width: 140px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>极简番茄钟</h1>
+        </header>
+
+        <main>
+            <div class="timer-display">
+                <div class="timer-circle">
+                    <div class="timer-text">
+                        <div class="timer-time" id="timerDisplay">25:00</div>
+                        <div class="timer-label" id="timerLabel">准备开始</div>
+                    </div>
+                    <svg class="progress-ring" width="200" height="200">
+                        <circle class="progress-ring-circle" cx="100" cy="100" r="93"></circle>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="start-controls">
+                    <button id="startBtn" class="btn btn-primary">开始</button>
+                    <div class="start-menu" id="startMenu">
+                        <button class="menu-item" data-phase="pomodoro">开始番茄钟</button>
+                        <button class="menu-item" data-phase="shortBreak">开始小休</button>
+                        <button class="menu-item" data-phase="longBreak">开始大休</button>
+                    </div>
+                </div>
+                <button id="pauseBtn" class="btn btn-secondary" style="display: none;">暂停</button>
+                <button id="resetBtn" class="btn btn-secondary">重置</button>
+                <button id="settingsBtn" class="btn btn-icon" title="设置">⚙️</button>
+            </div>
+
+            <div class="progress-info">
+                <div class="cycle-info">
+                    <span>当前循环: <span id="currentCycle">0</span>/<span id="totalCycles">4</span></span>
+                </div>
+            </div>
+        </main>
+
+        <!-- 设置面板 -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>设置</h2>
+                    <button class="close-btn" id="closeSettings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-item">
+                        <label for="pomodoroTime">番茄钟时长（分钟）</label>
+                        <input type="number" id="pomodoroTime" min="1" max="60" value="25">
+                    </div>
+                    <div class="setting-item">
+                        <label for="shortBreakTime">小休时长（分钟）</label>
+                        <input type="number" id="shortBreakTime" min="1" max="30" value="5">
+                    </div>
+                    <div class="setting-item">
+                        <label for="longBreakTime">大休时长（分钟）</label>
+                        <input type="number" id="longBreakTime" min="1" max="60" value="15">
+                    </div>
+                    <div class="setting-item">
+                        <label for="cyclesBeforeLongBreak">持续次数（大休前）</label>
+                        <input type="number" id="cyclesBeforeLongBreak" min="2" max="10" value="4">
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="enableSound"> 启用声音提醒
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="enableNotification"> 启用通知提醒
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" id="saveSettings">保存</button>
+                    <button class="btn btn-secondary" id="cancelSettings">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/storage.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/pomodoro.js"></script>
+</body>
+</html>
+
