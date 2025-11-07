@@ -2,7 +2,7 @@
 
 A minimal Chrome extension pomodoro timer to help you improve work efficiency.
 
-[中文说明](#中文说明) | [English](#english)
+[中文说明 (Chinese)](#chinese) | [English](#english)
 
 ---
 
@@ -159,7 +159,7 @@ For questions or suggestions, please submit via GitHub Issues.
 
 ---
 
-## 中文说明
+## Chinese / 中文说明
 
 ### 功能特性
 

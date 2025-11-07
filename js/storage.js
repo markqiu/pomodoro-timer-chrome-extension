@@ -1,5 +1,7 @@
+// Local storage management
 // 本地存储管理
 const Storage = {
+    // Default settings
     // 默认设置
     defaultSettings: {
         pomodoroTime: 25,
@@ -10,14 +12,17 @@ const Storage = {
         enableNotification: true
     },
 
+    // Check if in Chrome extension environment
     // 判断是否为Chrome插件环境
     isChromeExtension() {
         return typeof chrome !== 'undefined' && chrome.storage;
     },
 
+    // Get settings
     // 获取设置
     getSettings(callback) {
         if (this.isChromeExtension()) {
+            // Chrome extension environment
             // Chrome插件环境
             chrome.storage.local.get('pomodoroSettings', (result) => {
                 if (result.pomodoroSettings) {
@@ -33,6 +38,7 @@ const Storage = {
                 }
             });
         } else {
+            // Regular web page environment
             // 普通网页环境
             const stored = localStorage.getItem('pomodoroSettings');
             let settings = this.defaultSettings;
@@ -51,15 +57,18 @@ const Storage = {
         }
     },
 
+    // Save settings
     // 保存设置
     saveSettings(settings, callback) {
         try {
             if (this.isChromeExtension()) {
+                // Chrome extension environment
                 // Chrome插件环境
                 chrome.storage.local.set({ pomodoroSettings: settings }, () => {
                     if (callback) callback(true);
                 });
             } else {
+                // Regular web page environment
                 // 普通网页环境
                 localStorage.setItem('pomodoroSettings', JSON.stringify(settings));
                 if (callback) callback(true);
@@ -72,6 +81,7 @@ const Storage = {
         }
     },
 
+    // Clear all data
     // 清除所有数据
     clearAll(callback) {
         if (this.isChromeExtension()) {
@@ -84,6 +94,7 @@ const Storage = {
         }
     },
 
+    // Save timer state
     // 保存计时器状态
     saveTimerState(state, callback) {
         try {
@@ -103,6 +114,7 @@ const Storage = {
         }
     },
 
+    // Get timer state
     // 获取计时器状态
     getTimerState(callback) {
         if (this.isChromeExtension()) {
@@ -127,6 +139,7 @@ const Storage = {
         }
     },
 
+    // Clear timer state
     // 清除计时器状态
     clearTimerState(callback) {
         if (this.isChromeExtension()) {

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>极简番茄钟</title>
+    <title>Minimal Pomodoro Timer</title>
+    <!-- 极简番茄钟 -->
     <link rel="stylesheet" href="css/style.css">
     <style>
+        /* Popup specific styles */
         /* 弹窗特定样式 */
         body {
             min-height: auto;
@@ -32,6 +34,7 @@
             height: 200px;
         }
         .progress-ring-circle {
+            /* Progress value will be set dynamically by JavaScript */
             /* 进度值将由JavaScript动态设置 */
         }
         header h1 {
@@ -48,7 +51,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>极简番茄钟</h1>
+            <h1 id="appTitle">Minimal Pomodoro Timer</h1>
+            <!-- 极简番茄钟 -->
         </header>
 
         <main>
@@ -56,7 +60,8 @@
                 <div class="timer-circle">
                     <div class="timer-text">
                         <div class="timer-time" id="timerDisplay">25:00</div>
-                        <div class="timer-label" id="timerLabel">准备开始</div>
+                        <div class="timer-label" id="timerLabel">Ready to Start</div>
+                        <!-- 准备开始 -->
                     </div>
                     <svg class="progress-ring" width="200" height="200">
                         <circle class="progress-ring-circle" cx="100" cy="100" r="93"></circle>
@@ -66,69 +71,88 @@
 
             <div class="controls">
                 <div class="start-controls">
-                    <button id="startBtn" class="btn btn-primary">开始</button>
+                    <button id="startBtn" class="btn btn-primary">Start</button>
+                    <!-- 开始 -->
                     <div class="start-menu" id="startMenu">
-                        <button class="menu-item" data-phase="pomodoro">开始番茄钟</button>
-                        <button class="menu-item" data-phase="shortBreak">开始小休</button>
-                        <button class="menu-item" data-phase="longBreak">开始大休</button>
+                        <button class="menu-item" data-phase="pomodoro">Start Pomodoro</button>
+                        <!-- 开始番茄钟 -->
+                        <button class="menu-item" data-phase="shortBreak">Start Short Break</button>
+                        <!-- 开始小休 -->
+                        <button class="menu-item" data-phase="longBreak">Start Long Break</button>
+                        <!-- 开始大休 -->
                     </div>
                 </div>
-                <button id="pauseBtn" class="btn btn-secondary" style="display: none;">暂停</button>
-                <button id="resetBtn" class="btn btn-secondary">重置</button>
-                <button id="settingsBtn" class="btn btn-icon" title="设置">⚙️</button>
+                <button id="pauseBtn" class="btn btn-secondary" style="display: none;">Pause</button>
+                <!-- 暂停 -->
+                <button id="resetBtn" class="btn btn-secondary">Reset</button>
+                <!-- 重置 -->
+                <button id="settingsBtn" class="btn btn-icon" title="Settings">⚙️</button>
+                <!-- 设置 -->
             </div>
 
             <div class="progress-info">
                 <div class="cycle-info">
-                    <span>当前循环: <span id="currentCycle">0</span>/<span id="totalCycles">4</span></span>
+                    <span>Current Cycle: <span id="currentCycle">0</span>/<span id="totalCycles">4</span></span>
+                    <!-- 当前循环: -->
                 </div>
             </div>
         </main>
 
+        <!-- Settings Panel -->
         <!-- 设置面板 -->
         <div id="settingsModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>设置</h2>
+                    <h2>Settings</h2>
+                    <!-- 设置 -->
                     <button class="close-btn" id="closeSettings">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="setting-item">
-                        <label for="pomodoroTime">番茄钟时长（分钟）</label>
+                        <label for="pomodoroTime">Pomodoro Duration (minutes)</label>
+                        <!-- 番茄钟时长（分钟） -->
                         <input type="number" id="pomodoroTime" min="1" max="60" value="25">
                     </div>
                     <div class="setting-item">
-                        <label for="shortBreakTime">小休时长（分钟）</label>
+                        <label for="shortBreakTime">Short Break Duration (minutes)</label>
+                        <!-- 小休时长（分钟） -->
                         <input type="number" id="shortBreakTime" min="1" max="30" value="5">
                     </div>
                     <div class="setting-item">
-                        <label for="longBreakTime">大休时长（分钟）</label>
+                        <label for="longBreakTime">Long Break Duration (minutes)</label>
+                        <!-- 大休时长（分钟） -->
                         <input type="number" id="longBreakTime" min="1" max="60" value="15">
                     </div>
                     <div class="setting-item">
-                        <label for="cyclesBeforeLongBreak">持续次数（大休前）</label>
+                        <label for="cyclesBeforeLongBreak">Cycles Before Long Break</label>
+                        <!-- 持续次数（大休前） -->
                         <input type="number" id="cyclesBeforeLongBreak" min="2" max="10" value="4">
                     </div>
                     <div class="setting-item">
                         <label>
-                            <input type="checkbox" id="enableSound"> 启用声音提醒
+                            <input type="checkbox" id="enableSound"> Enable Sound Alert
+                            <!-- 启用声音提醒 -->
                         </label>
                     </div>
                     <div class="setting-item">
                         <label>
-                            <input type="checkbox" id="enableNotification"> 启用通知提醒
+                            <input type="checkbox" id="enableNotification"> Enable Notification Alert
+                            <!-- 启用通知提醒 -->
                         </label>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-primary" id="saveSettings">保存</button>
-                    <button class="btn btn-secondary" id="cancelSettings">取消</button>
+                    <button class="btn btn-primary" id="saveSettings">Save</button>
+                    <!-- 保存 -->
+                    <button class="btn btn-secondary" id="cancelSettings">Cancel</button>
+                    <!-- 取消 -->
                 </div>
             </div>
         </div>
     </div>
 
     <script src="js/storage.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/settings.js"></script>
     <script src="js/pomodoro.js"></script>
 </body>
