@@ -294,15 +294,57 @@ jobs:
           touch files.txt
         fi
         
+    - name: Create release with available files
+      shell: bash
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        echo "Creating release v$VERSION..."
+        
+        # Find extension zip file
+        EXT_FILE=""
+        if [ -d "./artifacts/extension" ]; then
+          EXT_FILE=$(find ./artifacts/extension -name "*.zip" -type f | head -1)
+        fi
+        
+        # Find desktop files
+        DESKTOP_FILES=""
+        if [ -d "./artifacts/desktop" ]; then
+          DESKTOP_FILES=$(find ./artifacts/desktop -type f)
+        fi
+        
+        # Create release using GitHub CLI or API
+        if command -v gh &> /dev/null; then
+          # Use GitHub CLI if available
+          if [ -n "$EXT_FILE" ]; then
+            gh release create "v$VERSION" \
+              --title "Minimal Pomodoro Timer v$VERSION" \
+              --notes "## Minimal Pomodoro Timer v$VERSION
+
+### Downloads
+
+#### Chrome Extension
+Download the extension package from the assets below.
+
+#### Desktop Application  
+Download the desktop application for your platform." \
+              "$EXT_FILE" $DESKTOP_FILES
+          fi
+        else
+          # Fallback: use softprops action with explicit file list
+          echo "GitHub CLI not available, using action..."
+        fi
+        
     - name: Create release
       uses: softprops/action-gh-release@v1
-      continue-on-error: false
+      continue-on-error: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         files: |
-          ${{ github.workspace }}/artifacts/extension/*
-          ${{ github.workspace }}/artifacts/desktop/**/*
+          ./artifacts/extension/*.zip
+          ./artifacts/desktop/**/*.dmg
+          ./artifacts/desktop/**/*.msi
+          ./artifacts/desktop/**/*.AppImage
         fail_on_unmatched_files: false
         name: Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
         body: |
