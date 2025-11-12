@@ -259,43 +259,51 @@ jobs:
           echo "Desktop artifacts directory not found"
         fi
         
-    - name: Prepare release files list
+    - name: Prepare release files
       shell: bash
       id: prepare-files
       run: |
-        # Create a file list
-        FILE_LIST=""
-        # Add extension files
+        # Find all files and output them line by line
+        echo "Finding release files..."
+        # Extension files
         if [ -d "./artifacts/extension" ]; then
           for file in ./artifacts/extension/*; do
             if [ -f "$file" ]; then
-              FILE_LIST="$FILE_LIST$file"$'\n'
-              echo "Adding: $file"
+              echo "$file" >> files.txt
+              echo "Found: $file"
             fi
           done
         fi
-        # Add desktop files
+        # Desktop files
         if [ -d "./artifacts/desktop" ]; then
-          while IFS= read -r -d '' file; do
+          find ./artifacts/desktop -type f 2>/dev/null | while read file; do
             if [ -f "$file" ]; then
-              FILE_LIST="$FILE_LIST$file"$'\n'
-              echo "Adding: $file"
+              echo "$file" >> files.txt
+              echo "Found: $file"
             fi
-          done < <(find ./artifacts/desktop -type f -print0 2>/dev/null)
+          done
         fi
-        # Save to file
-        echo "$FILE_LIST" > release_files.txt
-        echo "Files to upload:"
-        cat release_files.txt
-        # Count files
-        FILE_COUNT=$(grep -c . release_files.txt || echo "0")
-        echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+        # Display files
+        if [ -f "files.txt" ]; then
+          echo "Files to upload:"
+          cat files.txt
+          FILE_COUNT=$(wc -l < files.txt | tr -d ' ')
+          echo "Total files: $FILE_COUNT"
+        else
+          echo "WARNING: No files found!"
+          touch files.txt
+        fi
         
     - name: Create release
       uses: softprops/action-gh-release@v1
       continue-on-error: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: release_files.txt
+        files: |
+          ${{ github.workspace }}/artifacts/extension/*
+          ${{ github.workspace }}/artifacts/desktop/**/*
+        fail_on_unmatched_files: false
         name: Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
         body: |
           ## Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
