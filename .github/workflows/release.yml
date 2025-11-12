@@ -294,57 +294,55 @@ jobs:
           touch files.txt
         fi
         
-    - name: Create release with available files
+    - name: Find release files
       shell: bash
+      id: find-files
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-        echo "Creating release v$VERSION..."
+        echo "Finding files for release v$VERSION..."
         
-        # Find extension zip file
-        EXT_FILE=""
+        # Find all files
+        FILES=()
+        
+        # Extension files
         if [ -d "./artifacts/extension" ]; then
-          EXT_FILE=$(find ./artifacts/extension -name "*.zip" -type f | head -1)
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              FILES+=("$file")
+              echo "Found: $file"
+            fi
+          done < <(find ./artifacts/extension -type f)
         fi
         
-        # Find desktop files
-        DESKTOP_FILES=""
+        # Desktop files
         if [ -d "./artifacts/desktop" ]; then
-          DESKTOP_FILES=$(find ./artifacts/desktop -type f)
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              FILES+=("$file")
+              echo "Found: $file"
+            fi
+          done < <(find ./artifacts/desktop -type f)
         fi
         
-        # Create release using GitHub CLI or API
-        if command -v gh &> /dev/null; then
-          # Use GitHub CLI if available
-          if [ -n "$EXT_FILE" ]; then
-            gh release create "v$VERSION" \
-              --title "Minimal Pomodoro Timer v$VERSION" \
-              --notes "## Minimal Pomodoro Timer v$VERSION
-
-### Downloads
-
-#### Chrome Extension
-Download the extension package from the assets below.
-
-#### Desktop Application  
-Download the desktop application for your platform." \
-              "$EXT_FILE" $DESKTOP_FILES
-          fi
+        # Create file list for output
+        if [ ${#FILES[@]} -gt 0 ]; then
+          printf '%s\n' "${FILES[@]}" > files_to_upload.txt
+          echo "Files to upload:"
+          cat files_to_upload.txt
+          echo "file_count=${#FILES[@]}" >> $GITHUB_OUTPUT
         else
-          # Fallback: use softprops action with explicit file list
-          echo "GitHub CLI not available, using action..."
+          echo "WARNING: No files found!"
+          touch files_to_upload.txt
+          echo "file_count=0" >> $GITHUB_OUTPUT
         fi
         
     - name: Create release
       uses: softprops/action-gh-release@v1
-      continue-on-error: true
+      continue-on-error: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: |
-          ./artifacts/extension/*.zip
-          ./artifacts/desktop/**/*.dmg
-          ./artifacts/desktop/**/*.msi
-          ./artifacts/desktop/**/*.AppImage
+        files: files_to_upload.txt
         fail_on_unmatched_files: false
         name: Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
         body: |
