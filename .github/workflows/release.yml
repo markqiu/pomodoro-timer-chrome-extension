@@ -112,6 +112,7 @@ jobs:
         
     - name: Set version
       id: version
+      shell: bash
       run: |
         if [ "${{ github.event_name }}" == "push" ]; then
           VERSION=${GITHUB_REF#refs/tags/v}
@@ -140,21 +141,26 @@ jobs:
         brew install create-dmg
         
     - name: Update version files
+      shell: bash
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-        # Install jq
-        if [ "${{ matrix.platform }}" == "windows-latest" ]; then
-          choco install jq -y
-        else
-          sudo apt-get update && sudo apt-get install -y jq || brew install jq
-        fi
-        # Update package.json
-        jq ".version = \"$VERSION\"" package.json > package.json.tmp
-        mv package.json.tmp package.json
-        # Update tauri.conf.json
-        jq ".package.version = \"$VERSION\"" src-tauri/tauri.conf.json > tauri.conf.json.tmp
-        mv tauri.conf.json.tmp src-tauri/tauri.conf.json
-        echo "Updated version files to $VERSION"
+        # Use Node.js to update JSON files (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const version = '$VERSION';
+          
+          // Update package.json
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.version = version;
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          
+          // Update tauri.conf.json
+          const tauri = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+          tauri.package.version = version;
+          fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(tauri, null, 2) + '\n');
+          
+          console.log('Updated all version files to ' + version);
+        "
         
     - name: Install Tauri CLI
       run: |
