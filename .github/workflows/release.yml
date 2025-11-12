@@ -243,12 +243,21 @@ jobs:
         merge-multiple: true
         
     - name: List artifacts
+      shell: bash
       run: |
         echo "Extension artifacts:"
-        find ./artifacts/extension -type f
+        if [ -d "./artifacts/extension" ]; then
+          find ./artifacts/extension -type f 2>/dev/null || ls -R ./artifacts/extension 2>/dev/null || echo "No extension artifacts found"
+        else
+          echo "Extension artifacts directory not found"
+        fi
         echo ""
         echo "Desktop artifacts:"
-        find ./artifacts/desktop -type f
+        if [ -d "./artifacts/desktop" ]; then
+          find ./artifacts/desktop -type f 2>/dev/null || ls -R ./artifacts/desktop 2>/dev/null || echo "No desktop artifacts found"
+        else
+          echo "Desktop artifacts directory not found"
+        fi
         
     - name: Create release
       uses: softprops/action-gh-release@v1
