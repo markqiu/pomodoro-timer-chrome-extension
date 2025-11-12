@@ -135,7 +135,12 @@ jobs:
       if: matrix.platform == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libwebkit2gtk-4.0-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+        sudo apt-get install -y \
+          libwebkit2gtk-4.0-dev \
+          libssl-dev \
+          libayatana-appindicator3-dev \
+          librsvg2-dev \
+          patchelf
         
     - name: Install system dependencies (macOS)
       if: matrix.platform == 'macos-latest'
@@ -169,14 +174,19 @@ jobs:
         npm install -g @tauri-apps/cli@latest
         
     - name: Prepare dist directory for icons
+      shell: bash
       run: |
         mkdir -p dist/icons
-        cp icons/* dist/icons/ 2>/dev/null || true
-        # Create .ico from PNG for Windows if needed
+        if [ -d "icons" ]; then
+          cp -r icons/* dist/icons/ 2>/dev/null || true
+        fi
+        # For Windows, ensure icon.ico exists or create a placeholder
         if [ "${{ matrix.platform }}" == "windows-latest" ]; then
-          # Icon should already exist, but ensure it's there
-          if [ ! -f "dist/icons/icon.ico" ] && [ -f "icons/icon128.png" ]; then
-            echo "Note: icon.ico should be generated before build"
+          if [ ! -f "dist/icons/icon.ico" ]; then
+            if [ -f "icons/icon128.png" ]; then
+              # Try to copy PNG as fallback (Tauri may handle conversion)
+              cp icons/icon128.png dist/icons/icon.ico 2>/dev/null || true
+            fi
           fi
         fi
         
@@ -200,7 +210,7 @@ jobs:
     name: Create Release
     needs: [build-extension, build-desktop]
     runs-on: ubuntu-latest
-    if: needs.build-extension.result == 'success'
+    if: always() && needs.build-extension.result == 'success'
     
     steps:
     - name: Checkout code
