@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自动化测试 - 番茄钟</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 3px;
+        }
+        .pass { color: green; }
+        .fail { color: red; }
+        .pending { color: orange; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        #testResults {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>番茄钟桌面应用 - 自动化测试</h1>
+    
+    <div class="test-section">
+        <h2>测试控制</h2>
+        <button onclick="runAllTests()">运行所有测试</button>
+        <button onclick="clearResults()">清除结果</button>
+        <button onclick="testStorage()">测试存储</button>
+        <button onclick="testTimer()">测试计时器</button>
+        <button onclick="testSettings()">测试设置</button>
+    </div>
+
+    <div id="testResults"></div>
+
+    <script>
+        const testResults = [];
+        
+        function logTest(name, passed, message = '') {
+            const result = {
+                name,
+                passed,
+                message,
+                timestamp: new Date().toISOString()
+            };
+            testResults.push(result);
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const container = document.getElementById('testResults');
+            const passed = testResults.filter(r => r.passed).length;
+            const failed = testResults.filter(r => !r.passed).length;
+            const total = testResults.length;
+            
+            let html = `<h2>测试结果 (${passed}/${total} 通过, ${failed} 失败)</h2>`;
+            
+            testResults.forEach(result => {
+                const status = result.passed ? 'pass' : 'fail';
+                html += `
+                    <div class="test-item ${status}">
+                        <strong>${result.passed ? '✓' : '✗'}</strong> ${result.name}
+                        ${result.message ? `<br><small>${result.message}</small>` : ''}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function clearResults() {
+            testResults.length = 0;
+            updateDisplay();
+        }
+
+        // 测试存储功能
+        function testStorage() {
+            logTest('测试 localStorage 可用性', typeof Storage !== 'undefined');
+            
+            try {
+                localStorage.setItem('test', 'value');
+                const value = localStorage.getItem('test');
+                localStorage.removeItem('test');
+                logTest('测试 localStorage 读写', value === 'value');
+            } catch (e) {
+                logTest('测试 localStorage 读写', false, e.message);
+            }
+        }
+
+        // 测试计时器功能
+        function testTimer() {
+            // 检查 DesktopTimer 是否存在
+            if (typeof DesktopTimer === 'undefined') {
+                logTest('DesktopTimer 对象存在', false, 'DesktopTimer 未定义');
+                return;
+            }
+            
+            logTest('DesktopTimer 对象存在', true);
+            logTest('DesktopTimer.PHASES 定义', typeof DesktopTimer.PHASES !== 'undefined');
+            logTest('DesktopTimer.init 方法存在', typeof DesktopTimer.init === 'function');
+            logTest('DesktopTimer.startTimer 方法存在', typeof DesktopTimer.startTimer === 'function');
+            logTest('DesktopTimer.pauseTimer 方法存在', typeof DesktopTimer.pauseTimer === 'function');
+            logTest('DesktopTimer.resetTimer 方法存在', typeof DesktopTimer.resetTimer === 'function');
+            logTest('DesktopTimer.getState 方法存在', typeof DesktopTimer.getState === 'function');
+            logTest('DesktopTimer.saveState 方法存在', typeof DesktopTimer.saveState === 'function');
+            logTest('DesktopTimer.loadState 方法存在', typeof DesktopTimer.loadState === 'function');
+        }
+
+        // 测试设置功能
+        function testSettings() {
+            if (typeof Storage === 'undefined') {
+                logTest('Storage 对象存在', false, 'Storage 未定义');
+                return;
+            }
+            
+            logTest('Storage 对象存在', true);
+            logTest('Storage.getSettings 方法存在', typeof Storage.getSettings === 'function');
+            logTest('Storage.saveSettings 方法存在', typeof Storage.saveSettings === 'function');
+            
+            // 测试设置读写
+            const testSettings = {
+                pomodoroTime: 30,
+                shortBreakTime: 10,
+                longBreakTime: 20,
+                cyclesBeforeLongBreak: 5,
+                enableSound: true,
+                enableNotification: true
+            };
+            
+            try {
+                Storage.saveSettings(testSettings, (success) => {
+                    if (success) {
+                        Storage.getSettings((loaded) => {
+                            const match = JSON.stringify(loaded) === JSON.stringify(testSettings);
+                            logTest('设置保存和加载', match);
+                        });
+                    } else {
+                        logTest('设置保存和加载', false, '保存失败');
+                    }
+                });
+            } catch (e) {
+                logTest('设置保存和加载', false, e.message);
+            }
+        }
+
+        // 测试通知功能
+        function testNotifications() {
+            logTest('Notification API 可用', 'Notification' in window);
+            
+            if ('Notification' in window) {
+                const permission = Notification.permission;
+                logTest('通知权限状态', true, `权限: ${permission}`);
+            }
+        }
+
+        // 测试 UI 元素
+        function testUI() {
+            const elements = [
+                { id: 'timerDisplay', name: '计时器显示' },
+                { id: 'timerLabel', name: '计时器标签' },
+                { id: 'startBtn', name: '开始按钮' },
+                { id: 'pauseBtn', name: '暂停按钮' },
+                { id: 'resetBtn', name: '重置按钮' },
+                { id: 'settingsBtn', name: '设置按钮' },
+                { id: 'currentCycle', name: '循环计数' }
+            ];
+            
+            elements.forEach(el => {
+                const element = document.getElementById(el.id);
+                logTest(`${el.name} 元素存在`, element !== null);
+            });
+        }
+
+        // 运行所有测试
+        function runAllTests() {
+            clearResults();
+            logTest('开始测试', true, new Date().toLocaleString());
+            
+            testStorage();
+            testTimer();
+            testSettings();
+            testNotifications();
+            testUI();
+            
+            logTest('测试完成', true, `共 ${testResults.length - 2} 项测试`);
+        }
+
+        // 页面加载时自动运行基础测试
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                runAllTests();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

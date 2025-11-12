@@ -7,19 +7,20 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.0.1)'
+        description: 'Version to release (e.g., 1.0.3)'
         required: true
         type: string
 
 jobs:
-  build-and-release:
+  build-extension:
+    name: Build Chrome Extension
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Setup Node.js (for version parsing)
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
@@ -37,15 +38,21 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Final version: $VERSION"
         
-    - name: Update manifest.json version
+    - name: Update version files
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-        # Update version in manifest.json using jq
+        # Install jq
         sudo apt-get update && sudo apt-get install -y jq
+        # Update manifest.json
         jq ".version = \"$VERSION\"" manifest.json > manifest.json.tmp
         mv manifest.json.tmp manifest.json
-        echo "Updated manifest.json version to $VERSION"
-        cat manifest.json
+        # Update package.json
+        jq ".version = \"$VERSION\"" package.json > package.json.tmp
+        mv package.json.tmp package.json
+        # Update tauri.conf.json
+        jq ".package.version = \"$VERSION\"" src-tauri/tauri.conf.json > tauri.conf.json.tmp
+        mv tauri.conf.json.tmp src-tauri/tauri.conf.json
+        echo "Updated all version files to $VERSION"
         
     - name: Create build directory
       run: |
@@ -68,23 +75,181 @@ jobs:
         cd ..
         ls -lh minimal-pomodoro-v${VERSION}.zip
         
+    - name: Upload extension artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chrome-extension-v${{ steps.version.outputs.version }}
+        path: minimal-pomodoro-v${{ steps.version.outputs.version }}.zip
+        retention-days: 30
+
+  build-desktop:
+    name: Build Desktop App
+    strategy:
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            target: 'x86_64-pc-windows-msvc'
+            artifact-name: 'windows'
+            file-pattern: '*.msi'
+          - platform: 'macos-latest'
+            target: 'x86_64-apple-darwin'
+            artifact-name: 'macos'
+            file-pattern: '*.dmg'
+          - platform: 'ubuntu-latest'
+            target: 'x86_64-unknown-linux-gnu'
+            artifact-name: 'linux'
+            file-pattern: '*.AppImage'
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Set version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "push" ]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Extracted version from tag: $VERSION"
+        else
+          VERSION="${{ github.event.inputs.version }}"
+          echo "Using manual version: $VERSION"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Final version: $VERSION"
+        
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+        
+    - name: Install system dependencies (Linux)
+      if: matrix.platform == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.0-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+        
+    - name: Install system dependencies (macOS)
+      if: matrix.platform == 'macos-latest'
+      run: |
+        brew install create-dmg
+        
+    - name: Update version files
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        # Install jq
+        if [ "${{ matrix.platform }}" == "windows-latest" ]; then
+          choco install jq -y
+        else
+          sudo apt-get update && sudo apt-get install -y jq || brew install jq
+        fi
+        # Update package.json
+        jq ".version = \"$VERSION\"" package.json > package.json.tmp
+        mv package.json.tmp package.json
+        # Update tauri.conf.json
+        jq ".package.version = \"$VERSION\"" src-tauri/tauri.conf.json > tauri.conf.json.tmp
+        mv tauri.conf.json.tmp src-tauri/tauri.conf.json
+        echo "Updated version files to $VERSION"
+        
+    - name: Install Tauri CLI
+      run: |
+        npm install -g @tauri-apps/cli@latest
+        
+    - name: Build Tauri app
+      run: |
+        npm install
+        npm run tauri build
+        
+    - name: Upload desktop artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: desktop-${{ matrix.artifact-name }}-v${{ steps.version.outputs.version }}
+        path: |
+          src-tauri/target/release/bundle/**/${{ matrix.file-pattern }}
+          src-tauri/target/release/*.exe
+        retention-days: 30
+        if-no-files-found: warn
+
+  create-release:
+    name: Create Release
+    needs: [build-extension, build-desktop]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "push" ]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Extracted version from tag: $VERSION"
+        else
+          VERSION="${{ github.event.inputs.version }}"
+          echo "Using manual version: $VERSION"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Final version: $VERSION"
+        
+    - name: Download extension artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: chrome-extension-v${{ steps.version.outputs.version }}
+        path: ./artifacts/extension
+        
+    - name: Download desktop artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: desktop-*-v${{ steps.version.outputs.version }}
+        path: ./artifacts/desktop
+        merge-multiple: true
+        
+    - name: List artifacts
+      run: |
+        echo "Extension artifacts:"
+        find ./artifacts/extension -type f
+        echo ""
+        echo "Desktop artifacts:"
+        find ./artifacts/desktop -type f
+        
     - name: Create release
       uses: softprops/action-gh-release@v1
       with:
-        files: minimal-pomodoro-v${{ steps.version.outputs.version }}.zip
+        files: |
+          ./artifacts/extension/*
+          ./artifacts/desktop/**/*
         name: Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
         body: |
           ## Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
           
-          ### Download
-          Download the extension package from the assets below.
+          ### Downloads
           
-          ### Installation
+          #### Chrome Extension
+          Download the extension package from the assets below (`.zip` file).
+          
+          **Installation:**
           1. Download the `.zip` file
           2. Extract it to a folder
           3. Open Chrome and go to `chrome://extensions/`
           4. Enable "Developer mode"
           5. Click "Load unpacked" and select the extracted folder
+          
+          #### Desktop Application
+          Download the desktop application for your platform:
+          - **Windows**: `.msi` installer
+          - **macOS**: `.dmg` disk image
+          - **Linux**: `.AppImage` application
+          
+          **Installation:**
+          - **Windows**: Run the `.msi` installer
+          - **macOS**: Open the `.dmg` and drag the app to Applications
+          - **Linux**: Make the `.AppImage` executable (`chmod +x`) and run it
           
           ### Changes
           - See commit history for detailed changes
@@ -94,4 +259,3 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

@@ -45,6 +45,10 @@ const Pomodoro = {
             };
         }
         
+        // Check if running in desktop mode (no Chrome Extension API)
+        // 检查是否在桌面模式下运行（无 Chrome Extension API）
+        this.isDesktopMode = typeof chrome === 'undefined' || !chrome.runtime;
+        
         // Ensure start button is visible immediately
         // 立即确保开始按钮可见
         const startBtn = document.getElementById('startBtn');
@@ -58,11 +62,24 @@ const Pomodoro = {
         SettingsManager.getSettings((settings) => {
             console.log('Settings loaded:', settings);
             this.settings = settings;
+            
+            // Initialize desktop timer if in desktop mode
+            // 如果在桌面模式，初始化桌面计时器
+            if (this.isDesktopMode) {
+                console.log('Running in desktop mode, initializing DesktopTimer');
+                if (typeof DesktopTimer !== 'undefined') {
+                    DesktopTimer.init(settings);
+                    this.setupDesktopTimerListeners();
+                } else {
+                    console.error('DesktopTimer not found! Make sure desktop-timer.js is loaded');
+                }
+            }
+            
             this.bindEvents();
             this.setupMessageListener();
             
-            // Get current state from background
-            // 从background获取当前状态
+            // Get current state from background (or desktop timer)
+            // 从background（或桌面计时器）获取当前状态
             this.getStateFromBackground();
             
             // Request notification permission (if not yet requested)
@@ -82,6 +99,14 @@ const Pomodoro = {
     // 设置消息监听器
     setupMessageListener() {
         console.log('Setting up message listener');
+        
+        // Desktop mode uses event listeners instead
+        // 桌面模式使用事件监听器
+        if (this.isDesktopMode) {
+            console.log('Desktop mode: using DesktopTimer event listeners');
+            return;
+        }
+        
         if (typeof chrome === 'undefined' || !chrome.runtime) {
             console.error('Chrome runtime not available for message listener');
             return;
@@ -118,9 +143,20 @@ const Pomodoro = {
         });
     },
 
-    // Get state from background
-    // 从background获取状态
+    // Get state from background (or desktop timer)
+    // 从background（或桌面计时器）获取状态
     getStateFromBackground() {
+        if (this.isDesktopMode) {
+            if (typeof DesktopTimer !== 'undefined') {
+                const state = DesktopTimer.getState();
+                this.updateFromBackground(state);
+                this.updateDisplay();
+                this.updateProgressRing();
+                this.updateUIState();
+            }
+            return;
+        }
+        
         if (typeof chrome !== 'undefined' && chrome.runtime) {
             chrome.runtime.sendMessage({ action: 'getState' }, (response) => {
                 if (chrome.runtime.lastError) {
@@ -262,10 +298,43 @@ const Pomodoro = {
         document.getElementById('resetBtn').addEventListener('click', () => this.reset());
     },
 
-    // Send message to background
-    // 发送消息到background
+    // Send message to background (or desktop timer)
+    // 发送消息到background（或桌面计时器）
     sendMessage(action, data = {}) {
         console.log('sendMessage called:', action, data);
+        
+        if (this.isDesktopMode) {
+            // Use desktop timer
+            if (typeof DesktopTimer === 'undefined') {
+                console.error('DesktopTimer not available');
+                return;
+            }
+            
+            switch (action) {
+                case 'start':
+                    if (data.phase) {
+                        DesktopTimer.startWithPhase(data.phase);
+                    } else {
+                        DesktopTimer.startTimer();
+                    }
+                    break;
+                case 'pause':
+                    DesktopTimer.pauseTimer();
+                    break;
+                case 'reset':
+                    DesktopTimer.resetTimer();
+                    break;
+                case 'getState':
+                    const state = DesktopTimer.getState();
+                    this.updateFromBackground(state);
+                    this.updateDisplay();
+                    this.updateProgressRing();
+                    break;
+            }
+            return;
+        }
+        
+        // Chrome Extension mode
         if (typeof chrome === 'undefined' || !chrome.runtime) {
             console.error('Chrome runtime not available');
             return;
@@ -292,6 +361,44 @@ const Pomodoro = {
         } catch (error) {
             console.error('Error sending message:', error);
         }
+    },
+    
+    // Setup desktop timer listeners
+    // 设置桌面计时器监听器
+    setupDesktopTimerListeners() {
+        if (typeof DesktopTimer === 'undefined') return;
+        
+        DesktopTimer.on('timerUpdate', (data) => {
+            this.updateFromBackground(data);
+            this.updateDisplay();
+            this.updateProgressRing();
+        });
+        
+        DesktopTimer.on('timerStarted', (data) => {
+            this.updateFromBackground(data);
+            this.onTimerStarted();
+        });
+        
+        DesktopTimer.on('timerPaused', (data) => {
+            this.updateFromBackground(data);
+            this.onTimerPaused();
+        });
+        
+        DesktopTimer.on('timerReset', (data) => {
+            this.updateFromBackground(data);
+            this.onTimerReset();
+        });
+        
+        DesktopTimer.on('phaseComplete', (data) => {
+            this.updateFromBackground(data);
+            this.onPhaseComplete();
+        });
+        
+        // Load initial state
+        const state = DesktopTimer.getState();
+        this.updateFromBackground(state);
+        this.updateDisplay();
+        this.updateProgressRing();
     },
 
     start(phase = null) {
@@ -776,6 +883,11 @@ const Pomodoro = {
     },
 
     updateSettings(newSettings) {
+        // Update desktop timer settings if in desktop mode
+        // 如果在桌面模式，更新桌面计时器设置
+        if (this.isDesktopMode && typeof DesktopTimer !== 'undefined') {
+            DesktopTimer.settings = newSettings;
+        }
         this.settings = newSettings;
         
         // Notify background that settings have been updated

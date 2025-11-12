@@ -1,0 +1,62 @@
+{
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "devPath": "../",
+    "distDir": "../dist",
+    "withGlobalTauri": false
+  },
+  "package": {
+    "productName": "Minimal Pomodoro Timer",
+    "version": "1.0.3"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "open": true
+      },
+      "notification": {
+        "all": true
+      },
+      "window": {
+        "all": false,
+        "close": true,
+        "hide": true,
+        "show": true,
+        "maximize": true,
+        "minimize": true,
+        "unmaximize": true,
+        "unminimize": true,
+        "startDragging": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.pomodoro.timer",
+      "icon": [
+        "../dist/icons/icon.ico",
+        "../dist/icons/icon16.png",
+        "../dist/icons/icon48.png",
+        "../dist/icons/icon128.png"
+      ]
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "title": "Minimal Pomodoro Timer",
+        "width": 500,
+        "height": 600,
+        "minWidth": 400,
+        "minHeight": 500
+      }
+    ]
+  }
+}
+
