@@ -259,14 +259,43 @@ jobs:
           echo "Desktop artifacts directory not found"
         fi
         
+    - name: Prepare release files list
+      shell: bash
+      id: prepare-files
+      run: |
+        # Create a file list
+        FILE_LIST=""
+        # Add extension files
+        if [ -d "./artifacts/extension" ]; then
+          for file in ./artifacts/extension/*; do
+            if [ -f "$file" ]; then
+              FILE_LIST="$FILE_LIST$file"$'\n'
+              echo "Adding: $file"
+            fi
+          done
+        fi
+        # Add desktop files
+        if [ -d "./artifacts/desktop" ]; then
+          while IFS= read -r -d '' file; do
+            if [ -f "$file" ]; then
+              FILE_LIST="$FILE_LIST$file"$'\n'
+              echo "Adding: $file"
+            fi
+          done < <(find ./artifacts/desktop -type f -print0 2>/dev/null)
+        fi
+        # Save to file
+        echo "$FILE_LIST" > release_files.txt
+        echo "Files to upload:"
+        cat release_files.txt
+        # Count files
+        FILE_COUNT=$(grep -c . release_files.txt || echo "0")
+        echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+        
     - name: Create release
       uses: softprops/action-gh-release@v1
       continue-on-error: false
       with:
-        files: |
-          ./artifacts/extension/*
-          ./artifacts/desktop/**/*
-        fail_on_unmatched_files: false
+        files: release_files.txt
         name: Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
         body: |
           ## Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
