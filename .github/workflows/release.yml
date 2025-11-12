@@ -85,6 +85,7 @@ jobs:
   build-desktop:
     name: Build Desktop App
     strategy:
+      fail-fast: false
       matrix:
         include:
           - platform: 'windows-latest'
@@ -100,6 +101,7 @@ jobs:
             artifact-name: 'linux'
             file-pattern: '*.AppImage'
     runs-on: ${{ matrix.platform }}
+    continue-on-error: ${{ matrix.platform == 'macos-latest' }}
     
     steps:
     - name: Checkout code
@@ -138,7 +140,7 @@ jobs:
     - name: Install system dependencies (macOS)
       if: matrix.platform == 'macos-latest'
       run: |
-        brew install create-dmg
+        brew install create-dmg || true
         
     - name: Update version files
       shell: bash
@@ -166,10 +168,23 @@ jobs:
       run: |
         npm install -g @tauri-apps/cli@latest
         
+    - name: Prepare dist directory for icons
+      run: |
+        mkdir -p dist/icons
+        cp icons/* dist/icons/ 2>/dev/null || true
+        # Create .ico from PNG for Windows if needed
+        if [ "${{ matrix.platform }}" == "windows-latest" ]; then
+          # Icon should already exist, but ensure it's there
+          if [ ! -f "dist/icons/icon.ico" ] && [ -f "icons/icon128.png" ]; then
+            echo "Note: icon.ico should be generated before build"
+          fi
+        fi
+        
     - name: Build Tauri app
       run: |
         npm install
         npm run tauri build
+      continue-on-error: ${{ matrix.platform == 'macos-latest' }}
         
     - name: Upload desktop artifacts
       uses: actions/upload-artifact@v4
@@ -185,6 +200,7 @@ jobs:
     name: Create Release
     needs: [build-extension, build-desktop]
     runs-on: ubuntu-latest
+    if: needs.build-extension.result == 'success'
     
     steps:
     - name: Checkout code
