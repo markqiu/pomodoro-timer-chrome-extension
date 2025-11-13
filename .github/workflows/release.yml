@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.0.3)'
+        description: 'Version to release (e.g., 1.0.4)'
         required: true
         type: string
 
@@ -29,14 +29,23 @@ jobs:
       id: version
       shell: bash
       run: |
-        if [ "${{ github.event_name }}" == "push" ] && echo "${{ github.ref }}" | grep -q "^refs/tags/v"; then
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "Extracted version from tag: $VERSION"
+        if [ "${{ github.event_name }}" == "push" ]; then
+          if echo "${{ github.ref }}" | grep -q "^refs/tags/v"; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Extracted version from tag: $VERSION"
+          else
+            echo "Error: Push event is not a tag. Ref: ${{ github.ref }}"
+            exit 1
+          fi
         elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
           VERSION="${{ github.event.inputs.version }}"
           echo "Using manual version: $VERSION"
         else
           echo "Error: Cannot determine version. Event: ${{ github.event_name }}, Ref: ${{ github.ref }}"
+          exit 1
+        fi
+        if [ -z "$VERSION" ]; then
+          echo "Error: Version is empty"
           exit 1
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -131,14 +140,23 @@ jobs:
       id: version
       shell: bash
       run: |
-        if [ "${{ github.event_name }}" == "push" ] && echo "${{ github.ref }}" | grep -q "^refs/tags/v"; then
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "Extracted version from tag: $VERSION"
+        if [ "${{ github.event_name }}" == "push" ]; then
+          if echo "${{ github.ref }}" | grep -q "^refs/tags/v"; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Extracted version from tag: $VERSION"
+          else
+            echo "Error: Push event is not a tag. Ref: ${{ github.ref }}"
+            exit 1
+          fi
         elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
           VERSION="${{ github.event.inputs.version }}"
           echo "Using manual version: $VERSION"
         else
           echo "Error: Cannot determine version. Event: ${{ github.event_name }}, Ref: ${{ github.ref }}"
+          exit 1
+        fi
+        if [ -z "$VERSION" ]; then
+          echo "Error: Version is empty"
           exit 1
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -274,14 +292,23 @@ else:
       id: version
       shell: bash
       run: |
-        if [ "${{ github.event_name }}" == "push" ] && echo "${{ github.ref }}" | grep -q "^refs/tags/v"; then
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "Extracted version from tag: $VERSION"
+        if [ "${{ github.event_name }}" == "push" ]; then
+          if echo "${{ github.ref }}" | grep -q "^refs/tags/v"; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "Extracted version from tag: $VERSION"
+          else
+            echo "Error: Push event is not a tag. Ref: ${{ github.ref }}"
+            exit 1
+          fi
         elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
           VERSION="${{ github.event.inputs.version }}"
           echo "Using manual version: $VERSION"
         else
           echo "Error: Cannot determine version. Event: ${{ github.event_name }}, Ref: ${{ github.ref }}"
+          exit 1
+        fi
+        if [ -z "$VERSION" ]; then
+          echo "Error: Version is empty"
           exit 1
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
