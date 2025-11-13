@@ -27,6 +27,7 @@ jobs:
         
     - name: Set version
       id: version
+      shell: bash
       run: |
         if [ "${{ github.event_name }}" == "push" ]; then
           VERSION=${GITHUB_REF#refs/tags/v}
@@ -39,20 +40,31 @@ jobs:
         echo "Final version: $VERSION"
         
     - name: Update version files
+      shell: bash
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-        # Install jq
-        sudo apt-get update && sudo apt-get install -y jq
-        # Update manifest.json
-        jq ".version = \"$VERSION\"" manifest.json > manifest.json.tmp
-        mv manifest.json.tmp manifest.json
-        # Update package.json
-        jq ".version = \"$VERSION\"" package.json > package.json.tmp
-        mv package.json.tmp package.json
-        # Update tauri.conf.json
-        jq ".package.version = \"$VERSION\"" src-tauri/tauri.conf.json > tauri.conf.json.tmp
-        mv tauri.conf.json.tmp src-tauri/tauri.conf.json
-        echo "Updated all version files to $VERSION"
+        # Use Node.js to update JSON files (cross-platform)
+        node -e "
+          const fs = require('fs');
+          const version = '$VERSION';
+          
+          // Update manifest.json
+          const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+          manifest.version = version;
+          fs.writeFileSync('manifest.json', JSON.stringify(manifest, null, 2) + '\n');
+          
+          // Update package.json
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.version = version;
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          
+          // Update tauri.conf.json
+          const tauri = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+          tauri.package.version = version;
+          fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(tauri, null, 2) + '\n');
+          
+          console.log('Updated all version files to ' + version);
+        "
         
     - name: Create build directory
       run: |
@@ -135,8 +147,16 @@ jobs:
       if: matrix.platform == 'ubuntu-latest'
       run: |
         sudo apt-get update
+        # Try to install webkit2gtk (package name may vary by Ubuntu version)
         sudo apt-get install -y \
+          libwebkit2gtk-4.1-dev \
           libwebkit2gtk-4.0-dev \
+          libssl-dev \
+          libayatana-appindicator3-dev \
+          librsvg2-dev \
+          patchelf \
+          || sudo apt-get install -y \
+          libwebkit2gtk-6.0-dev \
           libssl-dev \
           libayatana-appindicator3-dev \
           librsvg2-dev \
@@ -169,6 +189,11 @@ jobs:
           console.log('Updated all version files to ' + version);
         "
         
+    - name: Install Python dependencies (Windows)
+      if: matrix.platform == 'windows-latest'
+      run: |
+        pip install Pillow || python -m pip install Pillow
+        
     - name: Install Tauri CLI
       run: |
         npm install -g @tauri-apps/cli@latest
@@ -180,13 +205,24 @@ jobs:
         if [ -d "icons" ]; then
           cp -r icons/* dist/icons/ 2>/dev/null || true
         fi
-        # For Windows, ensure icon.ico exists or create a placeholder
+        # For Windows, generate proper ICO file from PNG
         if [ "${{ matrix.platform }}" == "windows-latest" ]; then
-          if [ ! -f "dist/icons/icon.ico" ]; then
-            if [ -f "icons/icon128.png" ]; then
-              # Try to copy PNG as fallback (Tauri may handle conversion)
-              cp icons/icon128.png dist/icons/icon.ico 2>/dev/null || true
-            fi
+          if [ ! -f "dist/icons/icon.ico" ] && [ -f "icons/icon128.png" ]; then
+            # Use Python to convert PNG to ICO (PIL/Pillow)
+            python3 -c "
+from PIL import Image
+import os
+png_path = 'icons/icon128.png'
+ico_path = 'dist/icons/icon.ico'
+if os.path.exists(png_path):
+    img = Image.open(png_path)
+    if img.mode != 'RGBA':
+        img = img.convert('RGBA')
+    img.save(ico_path, format='ICO', sizes=[(128, 128), (64, 64), (32, 32), (16, 16)])
+    print('ICO file created successfully')
+else:
+    print('PNG file not found')
+" || echo "Failed to generate ICO, will use Tauri default"
           fi
         fi
         
@@ -218,6 +254,7 @@ jobs:
       
     - name: Set version
       id: version
+      shell: bash
       run: |
         if [ "${{ github.event_name }}" == "push" ]; then
           VERSION=${GITHUB_REF#refs/tags/v}
