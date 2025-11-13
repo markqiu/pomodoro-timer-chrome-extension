@@ -20,3 +20,17 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.cache
+
+# Test files (if temporary)
+test.html
+test-comprehensive.html
+
+# Temporary scripts
+clean-temp.bat
+fix-powershell-profile.bat
