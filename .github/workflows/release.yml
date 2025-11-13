@@ -259,56 +259,21 @@ jobs:
           echo "Desktop artifacts directory not found"
         fi
         
-    - name: Prepare release files
-      shell: bash
-      id: prepare-files
-      run: |
-        # Find all files and output them line by line
-        echo "Finding release files..."
-        # Extension files
-        if [ -d "./artifacts/extension" ]; then
-          for file in ./artifacts/extension/*; do
-            if [ -f "$file" ]; then
-              echo "$file" >> files.txt
-              echo "Found: $file"
-            fi
-          done
-        fi
-        # Desktop files
-        if [ -d "./artifacts/desktop" ]; then
-          find ./artifacts/desktop -type f 2>/dev/null | while read file; do
-            if [ -f "$file" ]; then
-              echo "$file" >> files.txt
-              echo "Found: $file"
-            fi
-          done
-        fi
-        # Display files
-        if [ -f "files.txt" ]; then
-          echo "Files to upload:"
-          cat files.txt
-          FILE_COUNT=$(wc -l < files.txt | tr -d ' ')
-          echo "Total files: $FILE_COUNT"
-        else
-          echo "WARNING: No files found!"
-          touch files.txt
-        fi
-        
-    - name: Find release files
+    - name: Find and list release files
       shell: bash
       id: find-files
       run: |
         VERSION="${{ steps.version.outputs.version }}"
         echo "Finding files for release v$VERSION..."
         
-        # Find all files
-        FILES=()
+        # Find all files and build a multiline string
+        FILE_LIST=""
         
         # Extension files
         if [ -d "./artifacts/extension" ]; then
           while IFS= read -r file; do
             if [ -f "$file" ]; then
-              FILES+=("$file")
+              FILE_LIST="${FILE_LIST}${file}"$'\n'
               echo "Found: $file"
             fi
           done < <(find ./artifacts/extension -type f)
@@ -318,21 +283,28 @@ jobs:
         if [ -d "./artifacts/desktop" ]; then
           while IFS= read -r file; do
             if [ -f "$file" ]; then
-              FILES+=("$file")
+              FILE_LIST="${FILE_LIST}${file}"$'\n'
               echo "Found: $file"
             fi
           done < <(find ./artifacts/desktop -type f)
         fi
         
-        # Create file list for output
-        if [ ${#FILES[@]} -gt 0 ]; then
-          printf '%s\n' "${FILES[@]}" > files_to_upload.txt
+        # Output file list (remove trailing newline)
+        FILE_LIST=$(echo -n "$FILE_LIST" | sed -z '$ s/\n$//')
+        
+        if [ -n "$FILE_LIST" ]; then
           echo "Files to upload:"
-          cat files_to_upload.txt
-          echo "file_count=${#FILES[@]}" >> $GITHUB_OUTPUT
+          echo "$FILE_LIST"
+          FILE_COUNT=$(echo "$FILE_LIST" | grep -c '^' || echo "0")
+          echo "Total files: $FILE_COUNT"
+          # Save to output for use in next step
+          echo "file_list<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILE_LIST" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
         else
           echo "WARNING: No files found!"
-          touch files_to_upload.txt
+          echo "file_list=" >> $GITHUB_OUTPUT
           echo "file_count=0" >> $GITHUB_OUTPUT
         fi
         
@@ -342,7 +314,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: files_to_upload.txt
+        files: |
+          ${{ steps.find-files.outputs.file_list }}
         fail_on_unmatched_files: false
         name: Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
         body: |
@@ -377,5 +350,3 @@ jobs:
           **Note**: For Chrome Web Store installation, please visit the [Chrome Web Store](https://chrome.google.com/webstore) page.
         draft: false
         prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
