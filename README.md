@@ -68,12 +68,30 @@ The badge on the extension icon shows the current status:
 - **Gray Background**: Paused
 - **No Badge**: Not running
 
+### Desktop App (Tauri)
+
+This project also supports building as a desktop application using Tauri:
+
+- ✅ **Cross-platform**: Windows, macOS, Linux
+- ✅ **Small size**: Much smaller than Electron
+- ✅ **Native performance**: Uses system WebView
+- ✅ **Same features**: All Chrome extension features available
+
+See [TAURI_SETUP.md](TAURI_SETUP.md) for desktop app build instructions.
+
+**Quick Start for macOS:**
+```bash
+chmod +x build-macos.sh
+./build-macos.sh
+```
+
 ### Tech Stack
 
 - Pure JavaScript (no framework)
 - Chrome Extension Manifest V3
 - Chrome Storage API
 - Chrome Notifications API
+- Tauri (for desktop app)
 
 ### Development
 
@@ -97,18 +115,39 @@ minimal-pomodoro/
 
 ##### Manual Build
 
-**Windows (PowerShell):**
-```powershell
-.\build.ps1
-```
-
-**Linux/macOS (Bash):**
+**All Platforms (Bash/Git Bash):**
 ```bash
 chmod +x build.sh
 ./build.sh [version]
 ```
 
+**Windows (using Git Bash or WSL):**
+If you have Git Bash installed, you can use the shell script directly. Alternatively, use WSL or manually create the build directory.
+
 This creates a zip file that can be uploaded directly to Chrome Web Store.
+
+##### Desktop App Build
+
+**macOS:**
+```bash
+chmod +x build-macos.sh
+./build-macos.sh
+```
+
+**Windows:**
+```bash
+# Icons should already be generated, or use Python script:
+python generate_ico.py
+# Then build
+npm run tauri:build
+```
+
+**All Platforms:**
+```bash
+npm run tauri:build
+```
+
+See [TAURI_SETUP.md](TAURI_SETUP.md) for detailed instructions.
 
 ##### Automatic Release (Recommended)
 
@@ -127,14 +166,13 @@ This creates a zip file that can be uploaded directly to Chrome Web Store.
 
 **Using Local Script:**
 
-```powershell
-# Windows (PowerShell)
-.\release.ps1 -Version "1.0.1" -CreateRelease
-```
+For local releases, use Git Bash or WSL on Windows, or use the GitHub Actions workflow (recommended):
 
 ```bash
-# Linux/macOS
-# See release.ps1 for PowerShell or use GitHub Actions
+# Create tag and push
+git tag v1.0.1
+git push origin v1.0.1
+# GitHub Actions will handle the rest
 ```
 
 ### Version History
@@ -172,6 +210,23 @@ For questions or suggestions, please submit via GitHub Issues.
 - ✅ 桌面通知
 - ✅ 后台运行，关闭弹窗继续计时
 - ✅ 状态持久化保存
+
+### 桌面应用 (Tauri)
+
+本项目还支持使用 Tauri 构建桌面应用：
+
+- ✅ **跨平台**：Windows、macOS、Linux
+- ✅ **体积小**：比 Electron 小得多
+- ✅ **原生性能**：使用系统 WebView
+- ✅ **相同功能**：Chrome 扩展的所有功能都可用
+
+查看 [TAURI_SETUP.md](TAURI_SETUP.md) 了解桌面应用构建说明。
+
+**macOS 快速开始：**
+```bash
+chmod +x build-macos.sh
+./build-macos.sh
+```
 
 ### 安装方法
 
@@ -225,16 +280,37 @@ For questions or suggestions, please submit via GitHub Issues.
 
 #### 手动打包
 
-**Windows (PowerShell):**
-```powershell
-.\build.ps1
-```
-
-**Linux/macOS (Bash):**
+**所有平台 (Bash/Git Bash):**
 ```bash
 chmod +x build.sh
 ./build.sh [version]
 ```
+
+**Windows (使用 Git Bash 或 WSL):**
+如果已安装 Git Bash，可以直接使用 shell 脚本。或者使用 WSL，或手动创建构建目录。
+
+#### 桌面应用构建
+
+**macOS:**
+```bash
+chmod +x build-macos.sh
+./build-macos.sh
+```
+
+**Windows:**
+```bash
+# 图标应该已经生成，或使用 Python 脚本：
+python generate_ico.py
+# 然后构建
+npm run tauri:build
+```
+
+**所有平台:**
+```bash
+npm run tauri:build
+```
+
+查看 [TAURI_SETUP.md](TAURI_SETUP.md) 了解详细说明。
 
 #### 自动发布（推荐）
 
@@ -253,8 +329,13 @@ chmod +x build.sh
 
 **使用本地脚本：**
 
-```powershell
-.\release.ps1 -Version "1.0.1" -CreateRelease
+在 Windows 上使用 Git Bash 或 WSL，或使用 GitHub Actions 工作流（推荐）：
+
+```bash
+# 创建标签并推送
+git tag v1.0.1
+git push origin v1.0.1
+# GitHub Actions 会自动处理其余步骤
 ```
 
 ### 版本历史

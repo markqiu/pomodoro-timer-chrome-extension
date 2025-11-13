@@ -1,0 +1,116 @@
+{
+  // 配置终端使用 CMD 而不是 PowerShell，避免包装器问题
+  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  
+  // 或者使用 Git Bash（如果已安装）
+  // "terminal.integrated.defaultProfile.windows": "Git Bash",
+  
+  // 禁用 PowerShell 集成功能，使用 CMD 避免临时脚本文件编码问题
+  "terminal.integrated.automationProfile.windows": {
+    "path": "C:\\Windows\\System32\\cmd.exe"
+  },
+  
+  // 确保使用正确的编码（UTF-8）
+  "terminal.integrated.encoding": "utf8",
+  
+  // 禁用 PowerShell 集成层，避免临时脚本文件生成问题
+  "terminal.integrated.enablePersistentSessions": false,
+  "terminal.integrated.shellIntegration.enabled": false,
+  
+  // 文件编码设置
+  "files.encoding": "utf8",
+  "files.autoGuessEncoding": true,
+  
+  // PowerShell 脚本文件编码
+  "[powershell]": {
+    "files.encoding": "utf8bom"
+  },
+  
+  // 禁用 PowerShell 集成层的脚本生成功能
+  "powershell.integratedConsole.showOnStartup": false,
+  "powershell.scriptAnalysis.enable": true,
+  "powershell.codeFormatting.preset": "OTBS",
+  
+  // 完全禁用 shell 集成，避免 PowerShell 包装器问题
+  "terminal.integrated.shellIntegration.decorationsEnabled": "never",
+  "terminal.integrated.shellIntegration.history": 0,
+  "terminal.integrated.shellIntegration.suggestEnabled": false,
+  "terminal.integrated.shellIntegration.commandsToSkipShell": [],
+  
+  // 禁用自动化脚本执行
+  "terminal.integrated.automationShell.windows": null,
+  
+  // 禁用任务和调试时的 PowerShell 脚本生成
+  "terminal.integrated.tabs.enabled": true,
+  "terminal.integrated.tabs.showActiveTerminal": "singleTerminal",
+  
+  // 完全禁用 shell 集成的所有功能（最彻底的解决方案）
+  "terminal.integrated.shellIntegration.useLogin": false,
+  "terminal.integrated.shellIntegration.allowWorkspaceShellIntegration": false,
+  
+  // 禁用任务执行时的 shell 集成
+  "terminal.integrated.tasks.enabled": true,
+  "terminal.integrated.tasks.useShellEnvironment": false,
+  
+  // 为所有终端配置文件添加环境变量，完全禁用 shell 集成
+  "terminal.integrated.env.windows": {
+    "VSCODE_SHELL_INTEGRATION": "0",
+    "VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH": ""
+  },
+  
+  // PowerShell 配置（如果需要使用 PowerShell）- 使用直接路径而不是 source，避免包装和格式化字符串错误
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-NoLogo",
+        "-Command",
+        "$env:VSCODE_SHELL_INTEGRATION='0'; $env:VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH=''"
+      ],
+      "env": {
+        "VSCODE_SHELL_INTEGRATION": "0",
+        "VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH": "",
+        "PSModulePath": "$env:PSModulePath",
+        "LANG": "zh_CN.UTF-8"
+      }
+    },
+    "PowerShell (UTF-8)": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-NoLogo",
+        "-Command",
+        "$env:VSCODE_SHELL_INTEGRATION='0'; $env:VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH=''; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; [Console]::InputEncoding = [System.Text.Encoding]::UTF8; $PSDefaultParameterValues['*:Encoding'] = 'utf8'; $OutputEncoding = [System.Text.Encoding]::UTF8"
+      ],
+      "icon": "terminal-powershell",
+      "env": {
+        "VSCODE_SHELL_INTEGRATION": "0",
+        "VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH": "",
+        "PSModulePath": "$env:PSModulePath",
+        "LANG": "zh_CN.UTF-8"
+      }
+    },
+    "Command Prompt": {
+      "path": "C:\\Windows\\System32\\cmd.exe",
+      "args": ["/K", "chcp 65001 >nul"],
+      "icon": "terminal-cmd",
+      "env": {
+        "VSCODE_SHELL_INTEGRATION": "0"
+      }
+    },
+    "Git Bash": {
+      "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+      "args": ["--login"],
+      "icon": "terminal-bash",
+      "env": {
+        "VSCODE_SHELL_INTEGRATION": "0"
+      }
+    }
+  }
+}
+
