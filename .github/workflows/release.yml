@@ -209,7 +209,16 @@ jobs:
         if [ "${{ matrix.platform }}" == "windows-latest" ]; then
           if [ ! -f "dist/icons/icon.ico" ] && [ -f "icons/icon128.png" ]; then
             # Use Python to convert PNG to ICO (PIL/Pillow)
-            python3 -c "
+            # Detect available Python command
+            PYTHON_CMD=""
+            if command -v python3 &> /dev/null; then
+              PYTHON_CMD="python3"
+            elif command -v python &> /dev/null; then
+              PYTHON_CMD="python"
+            fi
+            
+            if [ -n "$PYTHON_CMD" ]; then
+              $PYTHON_CMD -c "
 from PIL import Image
 import os
 png_path = 'icons/icon128.png'
@@ -223,6 +232,9 @@ if os.path.exists(png_path):
 else:
     print('PNG file not found')
 " || echo "Failed to generate ICO, will use Tauri default"
+            else
+              echo "Python not found, will use Tauri default ICO"
+            fi
           fi
         fi
         
@@ -306,38 +318,44 @@ else:
         # Find all files and build a multiline string
         FILE_LIST=""
         
-        # Extension files
+        # Extension files (use relative paths from workspace root)
         if [ -d "./artifacts/extension" ]; then
           while IFS= read -r file; do
             if [ -f "$file" ]; then
-              FILE_LIST="${FILE_LIST}${file}"$'\n'
-              echo "Found: $file"
+              # Normalize path to be relative to workspace root
+              REL_FILE="${file#./}"
+              FILE_LIST="${FILE_LIST}${REL_FILE}"$'\n'
+              echo "Found: $REL_FILE"
             fi
           done < <(find ./artifacts/extension -type f)
         fi
         
-        # Desktop files
+        # Desktop files (use relative paths from workspace root)
         if [ -d "./artifacts/desktop" ]; then
           while IFS= read -r file; do
             if [ -f "$file" ]; then
-              FILE_LIST="${FILE_LIST}${file}"$'\n'
-              echo "Found: $file"
+              # Normalize path to be relative to workspace root
+              REL_FILE="${file#./}"
+              FILE_LIST="${FILE_LIST}${REL_FILE}"$'\n'
+              echo "Found: $REL_FILE"
             fi
           done < <(find ./artifacts/desktop -type f)
         fi
         
-        # Output file list (remove trailing newline)
-        FILE_LIST=$(echo -n "$FILE_LIST" | sed -z '$ s/\n$//')
-        
+        # Output file list (ensure proper newline handling)
         if [ -n "$FILE_LIST" ]; then
+          # Remove trailing newline if present
+          FILE_LIST=$(printf '%s' "$FILE_LIST" | sed -z '$ s/\n$//')
           echo "Files to upload:"
           echo "$FILE_LIST"
           FILE_COUNT=$(echo "$FILE_LIST" | grep -c '^' || echo "0")
           echo "Total files: $FILE_COUNT"
-          # Save to output for use in next step
-          echo "file_list<<EOF" >> $GITHUB_OUTPUT
-          echo "$FILE_LIST" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Save to output for use in next step (use heredoc for multiline)
+          {
+            echo "file_list<<EOF"
+            echo "$FILE_LIST"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
           echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
         else
           echo "WARNING: No files found!"
@@ -351,9 +369,9 @@ else:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: |
-          ${{ steps.find-files.outputs.file_list }}
+        files: ${{ steps.find-files.outputs.file_list }}
         fail_on_unmatched_files: false
+        generate_release_notes: false
         name: Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
         body: |
           ## Minimal Pomodoro Timer v${{ steps.version.outputs.version }}
